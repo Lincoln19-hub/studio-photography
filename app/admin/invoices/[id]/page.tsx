@@ -38,16 +38,47 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
             <div className="text-sm text-gray-500">{invoice.client?.email}</div>
             {invoice.client?.phone && <div className="text-sm text-gray-500">{invoice.client.phone}</div>}
             {invoice.client?.address && <div className="text-sm text-gray-500">{invoice.client.address}</div>}
-            {invoice.booking && (
-              <div className="mt-4 rounded-lg bg-blue-50 p-3">
-                <div className="text-xs font-medium text-primary">Linked Booking</div>
-                <div className="mt-1 text-sm text-gray-700">
-                  {invoice.booking.service} · {formatDate(invoice.booking.eventDate)} · {invoice.booking.duration}h
-                </div>
-                {invoice.booking.location && <div className="text-xs text-gray-500">{invoice.booking.location}</div>}
+          {invoice.booking && (
+            <div className="mt-4 rounded-lg bg-blue-50 p-3">
+              <div className="text-xs font-medium text-primary">Linked Booking</div>
+              <div className="mt-1 text-sm text-gray-700">
+                {invoice.booking.service} · {formatDate(invoice.booking.eventDate)} · {invoice.booking.duration}h
               </div>
-            )}
-          </div>
+              {invoice.booking.location && <div className="text-xs text-gray-500">{invoice.booking.location}</div>}
+            </div>
+          )}
+          {invoice.gallery && (
+            <div className="mt-3 rounded-lg bg-green-50 border border-green-200 p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-medium text-green-800">✓ Gallery Delivered</div>
+                  <div className="mt-1 text-xs text-green-700">
+                    {invoice.gallery._count?.photos || 0} photos shared
+                  </div>
+                </div>
+                <Link
+                  href={`/admin/galleries/${invoice.gallery.id}`}
+                  className="btn btn-sm btn-outline"
+                >
+                  Manage
+                </Link>
+              </div>
+            </div>
+          )}
+          {invoice.status === 'paid' && !invoice.gallery && (
+            <div className="mt-3 rounded-lg bg-yellow-50 border border-yellow-200 p-3">
+              <div className="text-xs text-yellow-800">
+                💡 This invoice is paid but no gallery has been created yet.
+              </div>
+              <Link
+                href="/admin/galleries/new"
+                className="mt-1 inline-block text-xs font-medium text-yellow-700 hover:text-yellow-900"
+              >
+                Create gallery →
+              </Link>
+            </div>
+          )}
+        </div>
 
           {/* Items */}
           <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">

@@ -17,6 +17,7 @@ model Client {
   createdAt DateTime  @default(now())
   bookings  Booking[]
   invoices  Invoice[]
+  galleries Gallery[]
 
   @@map("clients")
 }
@@ -35,6 +36,7 @@ model Booking {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   invoice     Invoice?
+  gallery     Gallery?
 
   @@index([clientId])
   @@index([status])
@@ -59,6 +61,7 @@ model Invoice {
   notes        String?
   items        InvoiceItem[]
   payments     Payment[]
+  gallery      Gallery?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
@@ -91,4 +94,37 @@ model Payment {
 
   @@index([invoiceId])
   @@map("payments")
+}
+
+model Gallery {
+  id          String        @id @default(cuid())
+  invoiceId   String?       @unique
+  invoice     Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  bookingId   String?       @unique
+  booking     Booking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  clientId    String
+  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  accessToken String        @unique
+  isActive    Boolean       @default(true)
+  photos      GalleryPhoto[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([accessToken])
+  @@map("galleries")
+}
+
+model GalleryPhoto {
+  id          String   @id @default(cuid())
+  galleryId   String
+  gallery     Gallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  url         String
+  caption     String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([galleryId])
+  @@map("gallery_photos")
 }

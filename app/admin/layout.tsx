@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Camera, LayoutDashboard, CalendarCheck, FileText, Users, ArrowLeft } from 'lucide-react';
+import { Camera, LayoutDashboard, CalendarCheck, FileText, Users, ArrowLeft, Image as ImageIcon } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -11,6 +11,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/admin/bookings', label: 'Bookings', icon: CalendarCheck },
     { href: '/admin/invoices', label: 'Invoices', icon: FileText },
+    { href: '/admin/galleries', label: 'Galleries', icon: ImageIcon },
     { href: '/admin/clients', label: 'Clients', icon: Users },
   ];
 

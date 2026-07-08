@@ -9,9 +9,9 @@ async function tryDb<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
 }
 
 const DEMO_CLIENTS = [
-  { id: 'c1', name: 'Sarah & James Mensah', email: 'sarah.mensah@email.com', phone: '+233 24 123 4567', address: 'East Legon, Accra', createdAt: new Date('2026-06-01'), _count: { bookings: 2, invoices: 2 } },
-  { id: 'c2', name: 'Kofi Asante', email: 'kofi.asante@company.com', phone: '+233 20 987 6543', address: 'Airport Residential, Accra', createdAt: new Date('2026-06-15'), _count: { bookings: 1, invoices: 1 } },
-  { id: 'c3', name: 'Ama Serwaa', email: 'ama.serwaa@email.com', phone: '+233 27 555 1234', address: 'Osu, Accra', createdAt: new Date('2026-07-01'), _count: { bookings: 0, invoices: 0 } },
+  { id: 'c1', name: 'Sarah & James Mensah', email: 'sarah.mensah@email.com', phone: '+233 24 123 4567', address: 'East Legon, Accra', createdAt: new Date('2026-06-01'), _count: { bookings: 2, invoices: 2 }, galleries: 0 },
+  { id: 'c2', name: 'Kofi Asante', email: 'kofi.asante@company.com', phone: '+233 20 987 6543', address: 'Airport Residential, Accra', createdAt: new Date('2026-06-15'), _count: { bookings: 1, invoices: 1 }, galleries: 0 },
+  { id: 'c3', name: 'Ama Serwaa', email: 'ama.serwaa@email.com', phone: '+233 27 555 1234', address: 'Osu, Accra', createdAt: new Date('2026-07-01'), _count: { bookings: 0, invoices: 0 }, galleries: 0 },
 ];
 
 const DEMO_BOOKINGS = [
@@ -29,18 +29,31 @@ const DEMO_INVOICES = [
   ], payments: [
     { id: 'p1', amount: 2500, method: 'bank_transfer', reference: 'TXN-001', date: new Date('2026-07-15'), notes: '50% deposit' },
     { id: 'p2', amount: 2500, method: 'bank_transfer', reference: 'TXN-002', date: new Date('2026-08-01'), notes: 'Final payment' },
-  ] },
+  ], gallery: null },
   { id: 'inv2', invoiceNumber: 'INV-2026-002', clientId: 'c2', amount: 1800, taxRate: 0, taxAmount: 0, total: 2000, status: 'unpaid', dueDate: new Date('2026-07-15'), paidDate: null, paidAmount: 0, createdAt: new Date('2026-06-15'), client: { name: 'Kofi Asante', email: 'kofi.asante@company.com' }, items: [
     { id: 'i5', description: 'Event coverage (4 hours)', quantity: 1, rate: 1200, amount: 1200 },
     { id: 'i6', description: 'Photo editing & delivery', quantity: 1, rate: 400, amount: 400 },
     { id: 'i7', description: 'Same-day highlights video', quantity: 1, rate: 200, amount: 200 },
-  ], payments: [] },
+  ], payments: [], gallery: null },
   { id: 'inv3', invoiceNumber: 'INV-2026-003', clientId: 'c3', amount: 450, taxRate: 0, taxAmount: 0, total: 500, status: 'paid', dueDate: new Date('2026-07-10'), paidDate: new Date('2026-07-10'), paidAmount: 500, createdAt: new Date('2026-07-01'), client: { name: 'Ama Serwaa', email: 'ama.serwaa@email.com' }, items: [
     { id: 'i8', description: 'Portrait session (2 hours)', quantity: 1, rate: 300, amount: 300 },
     { id: 'i9', description: 'Retouched images (10 photos)', quantity: 1, rate: 200, amount: 200 },
   ], payments: [
     { id: 'p3', amount: 500, method: 'mobile_money', reference: 'MM-001', date: new Date('2026-07-10'), notes: 'Full payment' },
-  ] },
+  ], gallery: null },
+];
+
+const DEMO_GALLERIES = [
+  { id: 'g1', title: 'Mensah Wedding Gallery', accessToken: 'mensah-demo-token', clientId: 'c1', createdAt: new Date('2026-08-02'), isActive: true, client: { name: 'Sarah & James Mensah', email: 'sarah.mensah@email.com' }, invoice: { id: 'inv1', invoiceNumber: 'INV-2026-001' }, _count: { photos: 24 } },
+];
+
+const DEMO_GALLERY_PHOTOS = [
+  { id: 'ph1', url: '/images/hero-portrait.webp', caption: 'Couple portrait' },
+  { id: 'ph2', url: '/images/about-photo.webp', caption: 'Behind the scenes' },
+  { id: 'ph3', url: '/images/hero-portrait.webp', caption: 'First dance' },
+  { id: 'ph4', url: '/images/about-photo.webp', caption: 'Golden hour' },
+  { id: 'ph5', url: '/images/hero-portrait.webp', caption: 'Ring exchange' },
+  { id: 'ph6', url: '/images/about-photo.webp', caption: 'Celebration' },
 ];
 
 export async function getDashboardData() {
@@ -97,7 +110,30 @@ export async function getAllClients() {
 
 export async function getInvoice(id: string) {
   return await tryDb(
-    () => prisma.invoice.findUnique({ where: { id }, include: { client: true, booking: true, items: true, payments: { orderBy: { date: 'desc' } } } }),
+    () => prisma.invoice.findUnique({ where: { id }, include: { client: true, booking: true, items: true, payments: { orderBy: { date: 'desc' } }, gallery: true } }),
     DEMO_INVOICES.find(i => i.id === id) as any
+  );
+}
+
+export async function getAllGalleries() {
+  return await tryDb(
+    () => prisma.gallery.findMany({
+      include: { client: true, invoice: true, _count: { select: { photos: true } } },
+      orderBy: { createdAt: 'desc' },
+    }),
+    DEMO_GALLERIES as any
+  );
+}
+
+export async function getGallery(id: string) {
+  return await tryDb(
+    () => prisma.gallery.findUnique({
+      where: { id },
+      include: { client: true, invoice: true, photos: { orderBy: { order: 'asc' } } },
+    }),
+    {
+      ...DEMO_GALLERIES.find(g => g.id === id),
+      photos: DEMO_GALLERY_PHOTOS.map((p, i) => ({ ...p, order: i })),
+    } as any
   );
 }

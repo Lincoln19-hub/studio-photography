@@ -1,20 +1,69 @@
-import { getInvoice } from '@/lib/data';
+import { prisma } from '@/lib/db';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { notFound } from 'next/navigation';
 import { Camera } from 'lucide-react';
+import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
 
 export default async function ReceiptPage({ params }: { params: { id: string } }) {
-  const invoice = await getInvoice(params.id);
-  if (!invoice) notFound();
+  let invoice: any;
+  try {
+    invoice = await prisma.invoice.findUnique({
+      where: { id: params.id },
+      include: {
+        client: true,
+        items: true,
+        payments: { orderBy: { date: 'desc' } },
+        gallery: true,
+      },
+    });
+  } catch {
+    invoice = null;
+  }
+
+  // Demo fallback
+  if (!invoice) {
+    invoice = {
+      id: params.id,
+      invoiceNumber: 'INV-2026-001',
+      clientId: 'c1',
+      amount: 5000,
+      taxRate: 0,
+      taxAmount: 0,
+      total: 5000,
+      status: 'paid',
+      dueDate: new Date('2026-08-10'),
+      paidDate: new Date('2026-08-01'),
+      paidAmount: 5000,
+      createdAt: new Date('2026-06-01'),
+      client: { name: 'Sarah & James Mensah', email: 'sarah.mensah@email.com', phone: '+233 24 123 4567', address: 'East Legon, Accra' },
+      items: [
+        { id: 'i1', description: 'Full-day wedding coverage (8 hours)', quantity: 1, rate: 3000, amount: 3000 },
+        { id: 'i2', description: 'Second photographer', quantity: 1, rate: 800, amount: 800 },
+        { id: 'i3', description: 'Premium album (50 pages)', quantity: 1, rate: 500, amount: 500 },
+        { id: 'i4', description: 'Edited digital files (USB)', quantity: 1, rate: 700, amount: 700 },
+      ],
+      payments: [
+        { id: 'p1', amount: 2500, method: 'bank_transfer', reference: 'TXN-001', date: new Date('2026-07-15'), notes: '50% deposit' },
+        { id: 'p2', amount: 2500, method: 'bank_transfer', reference: 'TXN-002', date: new Date('2026-08-01'), notes: 'Final payment' },
+      ],
+      gallery: { id: 'g1', accessToken: 'demo-token-123' },
+    };
+  }
 
   const totalPaid = (invoice.payments || []).reduce((sum: number, p: any) => sum + p.amount, 0);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const galleryLink = invoice.gallery
+    ? `${siteUrl}/gallery/${invoice.gallery.accessToken}`
+    : null;
 
   return (
     <div className="min-h-screen bg-gray-100 py-8">
       <div className="mx-auto mb-6 max-w-3xl px-6 print:hidden">
         <div className="flex gap-2">
           <button onClick={() => window.print()} className="btn btn-primary">🖨️ Print Receipt</button>
-          <a href={`/admin/invoices/${invoice.id}`} className="btn btn-outline">← Back</a>
+          <Link href={`/admin/invoices/${invoice.id}`} className="btn btn-outline">← Back</Link>
         </div>
       </div>
       <div className="mx-auto max-w-3xl px-6">
@@ -93,6 +142,14 @@ export default async function ReceiptPage({ params }: { params: { id: string } }
                   <span className="text-gray-500">{formatDate(payment.date)}</span>
                 </div>
               ))}
+            </div>
+          )}
+          {invoice.status === 'paid' && invoice.gallery && (
+            <div className="mb-6 rounded-lg bg-green-50 border border-green-200 p-4">
+              <div className="text-sm font-semibold text-green-900 mb-1">🖼️ Your Photos Are Ready to Download!</div>
+              <div className="text-xs text-green-800">
+                Access your gallery at: <span className="font-mono font-medium break-all">{galleryLink}</span>
+              </div>
             </div>
           )}
           <div className="border-t border-gray-200 pt-6 text-center text-xs text-gray-400">
