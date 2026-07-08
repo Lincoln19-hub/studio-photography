@@ -1,88 +1,12 @@
-import { prisma } from '@/lib/db';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { getDashboardData } from '@/lib/data';
+import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
 import { TrendingUp, CalendarCheck, FileText, Users, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
+const iconMap: Record<string, any> = { TrendingUp, CalendarCheck, FileText, Users };
 
 export default async function DashboardPage() {
-  const [
-    totalRevenue,
-    unpaidInvoices,
-    upcomingBookings,
-    totalClients,
-    recentBookings,
-    recentInvoices,
-  ] = await Promise.all([
-    prisma.invoice.aggregate({
-      where: { status: 'paid' },
-      _sum: { paidAmount: true },
-    }),
-    prisma.invoice.count({ where: { status: 'unpaid' } }),
-    prisma.booking.count({
-      where: {
-        status: { in: ['pending', 'confirmed'] },
-        eventDate: { gte: new Date() },
-      },
-    }),
-    prisma.client.count(),
-    prisma.booking.findMany({
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      include: { client: true },
-    }),
-    prisma.invoice.findMany({
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      include: { client: true },
-    }),
-  ]);
-
-  const revenue = totalRevenue._sum.paidAmount || 0;
-
-  const stats = [
-    {
-      label: 'Total Revenue',
-      value: formatCurrency(revenue),
-      icon: TrendingUp,
-      color: 'text-green-600 bg-green-50',
-      trend: '+12.5%',
-      trendUp: true,
-    },
-    {
-      label: 'Pending Bookings',
-      value: upcomingBookings.toString(),
-      icon: CalendarCheck,
-      color: 'text-blue-600 bg-blue-50',
-      trend: '3 this week',
-      trendUp: true,
-    },
-    {
-      label: 'Unpaid Invoices',
-      value: unpaidInvoices.toString(),
-      icon: FileText,
-      color: 'text-red-600 bg-red-50',
-      trend: unpaidInvoices > 0 ? 'Action needed' : 'All clear',
-      trendUp: unpaidInvoices === 0,
-    },
-    {
-      label: 'Total Clients',
-      value: totalClients.toString(),
-      icon: Users,
-      color: 'text-purple-600 bg-purple-50',
-      trend: '+2 this month',
-      trendUp: true,
-    },
-  ];
-
-  const statusColors: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-700',
-    confirmed: 'bg-blue-100 text-blue-700',
-    completed: 'bg-green-100 text-green-700',
-    cancelled: 'bg-red-100 text-red-700',
-    unpaid: 'bg-red-100 text-red-700',
-    paid: 'bg-green-100 text-green-700',
-  };
+  const { stats, recentBookings, recentInvoices } = await getDashboardData();
 
   return (
     <div>
@@ -93,23 +17,26 @@ export default async function DashboardPage() {
 
       {/* Stats */}
       <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <div key={stat.label} className="stat-card">
-            <div className="flex items-center justify-between">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${stat.color}`}>
-                <stat.icon className="h-5 w-5" />
+        {stats.map((stat) => {
+          const Icon = iconMap[stat.icon] || TrendingUp;
+          return (
+            <div key={stat.label} className="stat-card">
+              <div className="flex items-center justify-between">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${stat.color}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <span className={`inline-flex items-center gap-1 text-xs font-medium ${stat.trendUp ? 'text-green-600' : 'text-red-600'}`}>
+                  {stat.trendUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                  {stat.trend}
+                </span>
               </div>
-              <span className={`inline-flex items-center gap-1 text-xs font-medium ${stat.trendUp ? 'text-green-600' : 'text-red-600'}`}>
-                {stat.trendUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                {stat.trend}
-              </span>
+              <div className="mt-4">
+                <div className="stat-value">{stat.value}</div>
+                <div className="stat-label">{stat.label}</div>
+              </div>
             </div>
-            <div className="mt-4">
-              <div className="stat-value">{stat.value}</div>
-              <div className="stat-label">{stat.label}</div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Recent Activity */}
@@ -118,23 +45,19 @@ export default async function DashboardPage() {
         <div className="rounded-xl border border-gray-200 bg-white">
           <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
             <h3 className="font-semibold text-gray-900">Recent Bookings</h3>
-            <Link href="/admin/bookings" className="text-xs font-medium text-primary hover:text-primary-800">
-              View all →
-            </Link>
+            <Link href="/admin/bookings" className="text-xs font-medium text-primary hover:text-primary-800">View all →</Link>
           </div>
           <div className="divide-y divide-gray-50">
             {recentBookings.length === 0 ? (
               <div className="px-6 py-8 text-center text-sm text-gray-500">No bookings yet</div>
             ) : (
-              recentBookings.map((booking) => (
+              recentBookings.map((booking: any) => (
                 <div key={booking.id} className="flex items-center justify-between px-6 py-4">
                   <div>
-                    <div className="text-sm font-medium text-gray-900">{booking.client.name}</div>
+                    <div className="text-sm font-medium text-gray-900">{booking.client?.name}</div>
                     <div className="text-xs text-gray-500">{booking.service} · {formatDate(booking.eventDate)}</div>
                   </div>
-                  <span className={`badge ${statusColors[booking.status] || 'bg-gray-100 text-gray-700'}`}>
-                    {booking.status}
-                  </span>
+                  <span className={`badge ${getStatusColor(booking.status)}`}>{booking.status}</span>
                 </div>
               ))
             )}
@@ -145,23 +68,19 @@ export default async function DashboardPage() {
         <div className="rounded-xl border border-gray-200 bg-white">
           <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
             <h3 className="font-semibold text-gray-900">Recent Invoices</h3>
-            <Link href="/admin/invoices" className="text-xs font-medium text-primary hover:text-primary-800">
-              View all →
-            </Link>
+            <Link href="/admin/invoices" className="text-xs font-medium text-primary hover:text-primary-800">View all →</Link>
           </div>
           <div className="divide-y divide-gray-50">
             {recentInvoices.length === 0 ? (
               <div className="px-6 py-8 text-center text-sm text-gray-500">No invoices yet</div>
             ) : (
-              recentInvoices.map((invoice) => (
+              recentInvoices.map((invoice: any) => (
                 <div key={invoice.id} className="flex items-center justify-between px-6 py-4">
                   <div>
                     <div className="text-sm font-medium text-gray-900">{invoice.invoiceNumber}</div>
-                    <div className="text-xs text-gray-500">{invoice.client.name} · {formatCurrency(invoice.total)}</div>
+                    <div className="text-xs text-gray-500">{invoice.client?.name} · {formatCurrency(invoice.total)}</div>
                   </div>
-                  <span className={`badge ${statusColors[invoice.status] || 'bg-gray-100 text-gray-700'}`}>
-                    {invoice.status}
-                  </span>
+                  <span className={`badge ${getStatusColor(invoice.status)}`}>{invoice.status}</span>
                 </div>
               ))
             )}

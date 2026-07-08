@@ -1,15 +1,10 @@
-import { prisma } from '@/lib/db';
+import { getAllBookings } from '@/lib/data';
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
 import Link from 'next/link';
 import { CalendarCheck, Plus } from 'lucide-react';
 
-export const dynamic = 'force-dynamic';
-
 export default async function BookingsPage() {
-  const bookings = await prisma.booking.findMany({
-    include: { client: true, invoice: true },
-    orderBy: { eventDate: 'desc' },
-  });
+  const bookings = await getAllBookings();
 
   return (
     <div>
@@ -44,11 +39,11 @@ export default async function BookingsPage() {
                 </td>
               </tr>
             ) : (
-              bookings.map((booking) => (
+              bookings.map((booking: any) => (
                 <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900">{booking.client.name}</div>
-                    <div className="text-xs text-gray-500">{booking.client.email}</div>
+                    <div className="text-sm font-medium text-gray-900">{booking.client?.name}</div>
+                    <div className="text-xs text-gray-500">{booking.client?.email}</div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-700">{booking.service}</td>
                   <td className="px-6 py-4 text-sm text-gray-700">{formatDate(booking.eventDate)}</td>

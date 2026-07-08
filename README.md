@@ -135,7 +135,31 @@ See `.env.example` for required variables:
 
 ```env
 DATABASE_URL="file:./dev.db"
+
+# Paystack (get keys from https://dashboard.paystack.com/#/settings/developers)
+PAYSTACK_PUBLIC_KEY="pk_test_xxx"
+PAYSTACK_SECRET_KEY="sk_test_xxx"
+PAYSTACK_WEBHOOK_SECRET="whsec_xxx"
+NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY="pk_test_xxx"
+
+# Deposit percentage (default 50%)
+DEPOSIT_PERCENTAGE=50
 ```
+
+### Setting Up Paystack
+
+1. Sign up at [paystack.com](https://paystack.com) (free)
+2. Go to **Settings → API Keys & Webhooks**
+3. Copy your **Test Keys** (start with `pk_test_` and `sk_test_`)
+4. Add them to your `.env` file (local) or Vercel environment variables (production)
+5. For production, switch to **Live Keys** when ready
+
+### Webhook Setup (for payment confirmations)
+
+In your Paystack dashboard:
+1. Go to **Settings → API Keys & Webhooks**
+2. Add webhook URL: `https://your-domain.com/api/webhooks/paystack`
+3. Copy the webhook secret and add as `PAYSTACK_WEBHOOK_SECRET`
 
 For production with PostgreSQL:
 ```env
