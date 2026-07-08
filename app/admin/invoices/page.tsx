@@ -3,6 +3,8 @@ import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
 import Link from 'next/link';
 import { FileText, Plus } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function InvoicesPage() {
   const invoices = await prisma.invoice.findMany({
     include: {

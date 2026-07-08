@@ -1,30 +1,33 @@
-# Studio Photography — Full Stack App
+# 📷 Studio Photography
 
-A professional photography studio management system built with Next.js, Prisma, and SQLite.
+> Professional photography studio management system — bookings, invoicing, receipts & admin dashboard.
 
-## Features
+[![Deploy to Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/studio-photography&project-name=studio-photography&repository-name=studio-photography)
 
-- 🌐 **Public Website** — Beautiful landing page with booking form
--  **Booking Management** — Clients can book sessions online
-- 💰 **Invoicing** — Create, send, and track invoices
--  **Receipts** — Generate printable receipts for payments
-- 📊 **Admin Dashboard** — Overview of bookings, revenue, and clients
-- 👥 **Client Management** — Track client info and history
+---
 
-## Tech Stack
+## ✨ Features
 
-- **Framework:** Next.js 14 (App Router)
-- **Language:** TypeScript
-- **Database:** SQLite via Prisma ORM
-- **Styling:** Tailwind CSS
-- **Icons:** Lucide React
+### 🌐 Public Site
+- Beautiful landing page with services, gallery & about sections
+- **Online booking form** — clients can book sessions directly
+- Mobile-responsive design
 
-## Getting Started
+### 🔐 Admin Dashboard
+- **Dashboard** — revenue stats, pending bookings, unpaid invoices
+- **Bookings** — view, manage & track all session bookings
+- **Invoicing** — create invoices with line items, tax & auto-numbering
+- **Payments** — record payments (cash, card, bank transfer, mobile money)
+- **Receipts** — printable receipt view for paid invoices
+- **Clients** — full client directory with contact info & history
+
+---
+
+## 🚀 Quick Start
 
 ### 1. Install Dependencies
 
 ```bash
-cd studio-app
 npm install
 ```
 
@@ -36,83 +39,99 @@ npx prisma db push
 npm run db:seed
 ```
 
-### 3. Run Development Server
+### 3. Run Dev Server
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the site.
+Open [http://localhost:3000](http://localhost:3000)
 
-## Project Structure
+---
+
+## ️ Project Structure
 
 ```
 studio-app/
 ├── app/
-│   ├── page.tsx              # Public landing page
-│   ├── book/                 # Public booking form
-│   ├── admin/                # Admin dashboard
-│   │   ├── page.tsx          # Dashboard overview
-│   │   ├── bookings/         # Booking management
-│   │   ├── invoices/         # Invoice management
-│   │   │   ├── new/          # Create invoice
-│   │   │   └── [id]/         # Invoice detail + receipt
-│   │   └── clients/          # Client management
-│   └── api/                  # API routes
+│   ├── page.tsx              ← Public landing page
+│   ├── book/                 ← Public booking form
+│   ├── admin/                ← Admin dashboard
+│   │   ├── page.tsx          ← Dashboard overview
+│   │   ├── bookings/         ← Booking management
+│   │   ├── invoices/         ← Invoice management
+│   │   │   ├── new/          ← Create invoice
+│   │   │   └── [id]/         ← Invoice detail + receipt
+│   │   └── clients/          ← Client management
+│   └── api/                  ← API routes (bookings, invoices, payments, clients)
 ├── prisma/
-│   ├── schema.prisma         # Database schema
-│   └── seed.ts              # Sample data
+│   ├── schema.prisma         ← Database schema (Client, Booking, Invoice, Payment)
+│   └── seed.ts              ← Sample data (3 clients, 3 bookings, 3 invoices)
 ├── lib/
-│   ├── db.ts                # Prisma client
-│   ── utils.ts             # Utility functions
-└── public/
-    └── images/              # Static images
+│   ├── db.ts                ← Prisma client singleton
+│   └── utils.ts             ← Formatting & utility functions
+└── public/images/            ← Static images
 ```
 
-## Key Pages
+---
 
-- **Home:** `/` — Public landing page
-- **Book:** `/book` — Public booking form
-- **Admin:** `/admin` — Dashboard overview
-- **Bookings:** `/admin/bookings` — View all bookings
-- **Invoices:** `/admin/invoices` — Invoice list
-- **New Invoice:** `/admin/invoices/new` — Create invoice
-- **Invoice Detail:** `/admin/invoices/[id]` — View invoice
-- **Receipt:** `/admin/invoices/[id]/receipt` — Printable receipt
-- **Clients:** `/admin/clients` — Client list
+## 🛠️ Tech Stack
 
-## Database Schema
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 14 (App Router) |
+| Language | TypeScript |
+| Database | SQLite (dev) / PostgreSQL (production) |
+| ORM | Prisma |
+| Styling | Tailwind CSS |
+| Icons | Lucide React |
 
-- **Client** — Customer information
-- **Booking** — Session bookings with status tracking
-- **Invoice** — Billing with line items
-- **InvoiceItem** — Individual items on invoices
-- **Payment** — Payment records linked to invoices
+---
 
-## Sample Data
+## 📊 Database Schema
 
-The seed script creates:
-- 3 sample clients
-- 3 bookings (confirmed, pending, completed)
-- 3 invoices (paid, unpaid, paid)
-- Sample payments
+- **Client** — name, email, phone, address, notes
+- **Booking** — service, event date, duration, location, budget, status (pending/confirmed/completed/cancelled)
+- **Invoice** — auto-numbered, line items, tax rate, due date, status (unpaid/paid/overdue)
+- **InvoiceItem** — description, quantity, rate, amount
+- **Payment** — amount, method (cash/card/bank_transfer/mobile_money), reference, date
 
-## Deployment
+---
 
-### Vercel (Recommended)
+## 🌍 Deploy to Vercel
+
+Click the button above, or:
 
 ```bash
-npm install -g vercel
-vercel
+npx vercel
 ```
 
-Note: For production, consider migrating from SQLite to PostgreSQL.
+### Production Database
 
-### Other Platforms
+For production, switch from SQLite to PostgreSQL:
 
-The app can be deployed to any Node.js hosting platform that supports Next.js.
+1. Add a Postgres database (Vercel Postgres, Supabase, etc.)
+2. Update the `DATABASE_URL` environment variable
+3. Run `npx prisma db push` in the Vercel deployment
 
-## Environment Variables
+---
+
+## 📝 Common Commands
+
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run start        # Start production server
+npm run db:push      # Sync database schema
+npm run db:seed      # Seed with sample data
+npm run db:studio    # Open Prisma Studio (visual DB editor)
+```
+
+---
+
+## 🔐 Environment Variables
+
+See `.env.example` for required variables:
 
 ```env
 DATABASE_URL="file:./dev.db"
@@ -120,9 +139,11 @@ DATABASE_URL="file:./dev.db"
 
 For production with PostgreSQL:
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/studio?schema=public"
+DATABASE_URL="postgresql://user:password@host:5432/studio_db?schema=public"
 ```
 
-## License
+---
+
+## 📄 License
 
 MIT

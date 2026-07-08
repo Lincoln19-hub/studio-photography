@@ -3,6 +3,8 @@ import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
 import Link from 'next/link';
 import { CalendarCheck, Plus } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function BookingsPage() {
   const bookings = await prisma.booking.findMany({
     include: { client: true, invoice: true },

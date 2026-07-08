@@ -3,6 +3,8 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { TrendingUp, CalendarCheck, FileText, Users, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
   const [
     totalRevenue,

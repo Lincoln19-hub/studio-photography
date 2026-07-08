@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { FileText, Download, Plus, Printer } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function InvoiceDetailPage({ params }: { params: { id: string } }) {
   const invoice = await prisma.invoice.findUnique({
     where: { id: params.id },
