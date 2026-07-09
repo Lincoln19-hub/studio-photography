@@ -1,14 +1,9 @@
-import { type ClassValue, clsx } from 'clsx';
-
-export function cn(...inputs: ClassValue[]) {
-  return clsx(inputs);
+export function cn(...classes: (string | false | null | undefined)[]) {
+  return classes.filter(Boolean).join(" ");
 }
 
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-GH', {
-    style: 'currency',
-    currency: 'GHS',
-  }).format(amount);
+  return `GH₵${amount.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function formatDate(date: Date | string): string {
@@ -46,6 +41,22 @@ export function getStatusColor(status: string): string {
     unpaid: 'bg-red-100 text-red-800',
     paid: 'bg-green-100 text-green-800',
     overdue: 'bg-orange-100 text-orange-800',
+    active: 'bg-green-100 text-green-800',
+    inactive: 'bg-slate-100 text-slate-800',
   };
   return colors[status] || 'bg-gray-100 text-gray-800';
+}
+
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .trim();
+}
+
+export function calculateDeposit(price: number, percentage: number) {
+  const deposit = (price * percentage) / 100;
+  return { deposit, balance: price - deposit };
 }

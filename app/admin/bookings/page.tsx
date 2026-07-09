@@ -1,62 +1,74 @@
 import { getAllBookings } from '@/lib/data';
-import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
+import { formatDate, getStatusColor } from '@/lib/utils';
 import Link from 'next/link';
 import { CalendarCheck, Plus } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
+interface Booking {
+  id: string;
+  service: string;
+  eventDate: Date;
+  location?: string;
+  status: string;
+  budget?: number;
+  client: {
+    name: string;
+    email: string;
+  };
+}
+
 export default async function BookingsPage() {
-  const bookings = await getAllBookings();
+  const bookings = await getAllBookings() as Booking[];
 
   return (
-    <div>
-      <div className="mb-8 flex items-center justify-between">
+    <div className="space-y-6 p-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
-          <p className="mt-1 text-sm text-gray-500">{bookings.length} total bookings</p>
+          <h1 className="text-2xl font-bold text-slate-900">Bookings</h1>
+          <p className="text-slate-500">Manage your photography bookings</p>
         </div>
-        <Link href="/book" className="btn btn-primary">
-          <Plus className="h-4 w-4" /> New Booking
-        </Link>
+        <button className="btn btn-primary">
+          <Plus className="h-4 w-4" />
+          New Booking
+        </button>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-        <table className="w-full">
-          <thead className="border-b border-gray-100 bg-gray-50/50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Client</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Service</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Duration</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Budget</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {bookings.length === 0 ? (
+      <div className="card overflow-hidden p-0">
+        {bookings.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <CalendarCheck className="mb-4 h-12 w-12 text-slate-300" />
+            <p className="text-slate-500">No bookings yet</p>
+          </div>
+        ) : (
+          <table className="w-full text-left text-sm">
+            <thead className="border-b bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-500">
-                  <CalendarCheck className="mx-auto mb-2 h-8 w-8 text-gray-300" />
-                  No bookings yet
-                </td>
+                <th className="px-6 py-3">Client</th>
+                <th className="px-6 py-3">Service</th>
+                <th className="px-6 py-3">Date</th>
+                <th className="px-6 py-3">Location</th>
+                <th className="px-6 py-3">Status</th>
               </tr>
-            ) : (
-              bookings.map((booking: any) => (
-                <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors">
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {bookings.map((booking) => (
+                <tr key={booking.id} className="hover:bg-slate-50">
                   <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900">{booking.client?.name}</div>
-                    <div className="text-xs text-gray-500">{booking.client?.email}</div>
+                    <p className="font-medium text-slate-900">{booking.client.name}</p>
+                    <p className="text-xs text-slate-500">{booking.client.email}</p>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{booking.service}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{formatDate(booking.eventDate)}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{booking.duration}h</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{booking.budget ? formatCurrency(booking.budget) : '—'}</td>
+                  <td className="px-6 py-4 text-slate-600">{booking.service}</td>
+                  <td className="px-6 py-4 text-slate-600">{formatDate(booking.eventDate)}</td>
+                  <td className="px-6 py-4 text-slate-600">{booking.location || '—'}</td>
                   <td className="px-6 py-4">
                     <span className={`badge ${getStatusColor(booking.status)}`}>{booking.status}</span>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

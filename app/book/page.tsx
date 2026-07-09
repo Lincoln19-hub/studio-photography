@@ -1,394 +1,329 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Camera, Calendar, Clock, MapPin, User, Mail, Phone, MessageSquare, Sparkles, Lock } from 'lucide-react';
+import { Camera, Clock, Users, Image, MapPin, CheckCircle, Loader2 } from 'lucide-react';
+import { formatCurrency, calculateDeposit } from '@/lib/utils';
+import Link from 'next/link';
 
-declare global {
-  interface Window {
-    PaystackPop: any;
-  }
+interface PackageFeature {
+  id: number;
+  feature: string;
 }
 
-const SERVICE_PRICES: Record<string, number> = {
-  Wedding: 5000,
-  Portrait: 500,
-  Event: 2000,
-  Commercial: 3000,
-};
+interface PackageData {
+  id: number;
+  sessionId: number;
+  name: string;
+  description: string | null;
+  price: string;
+  duration: string;
+  maxPeople: number | null;
+  editedPhotos: number | null;
+  outfitChanges: number | null;
+  locations: number | null;
+  deliveryTime: string | null;
+  depositPercentage: number;
+  rescheduleAllowed: boolean;
+  rescheduleHours: number | null;
+  features: PackageFeature[];
+}
 
-const DEPOSIT_PERCENTAGE = 50;
+interface SessionData {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  category: string | null;
+  image: string | null;
+  packages: PackageData[];
+}
 
-export default function BookPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [paystackLoading, setPaystackLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [bookingResult, setBookingResult] = useState<any>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    service: 'Portrait',
-    eventDate: '',
-    duration: '2',
-    location: '',
-    budget: '',
-    notes: '',
-  });
+export default function BookingPage() {
+  const [sessions, setSessions] = useState<SessionData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedSession, setSelectedSession] = useState<SessionData | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<PackageData | null>(null);
 
-  // Load Paystack script
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://js.paystack.co/v1/inline.js';
-    script.async = true;
-    document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
-    };
+    fetch('/api/sessions')
+      .then((r) => r.json())
+      .then((data) => {
+        setSessions(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
-  const selectedPrice = formData.budget
-    ? parseFloat(formData.budget)
-    : SERVICE_PRICES[formData.service] || 1000;
+  function selectSession(session: SessionData) {
+    setSelectedSession(session);
+    setSelectedPackage(null);
+  }
 
-  const depositAmount = (selectedPrice * DEPOSIT_PERCENTAGE) / 100;
-  const balanceAmount = selectedPrice - depositAmount;
-
-  const handlePaystackPayment = () => {
-    if (!window.PaystackPop) {
-      alert('Payment system loading, please try again in a moment.');
-      return;
-    }
-
-    if (!formData.name || !formData.email || !formData.eventDate) {
-      alert('Please fill in your name, email, and event date.');
-      return;
-    }
-
-    setPaystackLoading(true);
-
-    const reference = `STD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    const handler = window.PaystackPop.setup({
-      key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || 'pk_test_xxx',
-      email: formData.email,
-      amount: depositAmount * 100, // Paystack uses pesewas/kobo
-      currency: 'GHS',
-      ref: reference,
-      metadata: {
-        custom_fields: [
-          { display_name: 'Service', variable_name: 'service', value: formData.service },
-          { display_name: 'Event Date', variable_name: 'event_date', value: formData.eventDate },
-          { display_name: 'Deposit', variable_name: 'deposit', value: `${DEPOSIT_PERCENTAGE}%` },
-        ],
-      },
-      callback: async (response: any) => {
-        try {
-          setLoading(true);
-          const res = await fetch('/api/verify-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              reference: response.reference,
-              bookingData: formData,
-            }),
-          });
-
-          const data = await res.json();
-
-          if (res.ok) {
-            setBookingResult(data.booking);
-            setSuccess(true);
-          } else {
-            alert(data.error || 'Payment verification failed');
-          }
-        } catch (error) {
-          console.error(error);
-          alert('Something went wrong. Your payment was received — contact us to confirm.');
-        } finally {
-          setLoading(false);
-          setPaystackLoading(false);
-        }
-      },
-      onClose: () => {
-        setPaystackLoading(false);
-      },
-    });
-
-    handler.openIframe();
-  };
-
-  const updateField = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  if (success) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
-        <div className="max-w-md rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-600">
-            <svg className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h2 className="mb-2 text-xl font-bold text-gray-900">Booking Confirmed! 🎉</h2>
-          <p className="mb-6 text-sm text-gray-500">
-            Your {DEPOSIT_PERCENTAGE}% deposit has been received. We'll contact you within 24 hours.
-          </p>
-
-          {bookingResult && (
-            <div className="mb-6 rounded-lg bg-blue-50 p-4 text-left text-sm">
-              <div className="mb-2 font-semibold text-primary">Booking Details</div>
-              <div className="space-y-1 text-gray-700">
-                <div>Invoice: <span className="font-medium">{bookingResult.invoiceNumber}</span></div>
-                <div>Deposit Paid: <span className="font-medium">GHS {bookingResult.amountPaid.toFixed(2)}</span></div>
-                <div>Balance Due: <span className="font-medium text-orange-600">GHS {bookingResult.balance.toFixed(2)}</span></div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-2 justify-center">
-            <a href="/" className="btn btn-outline">Back to Home</a>
-            <button
-              onClick={() => {
-                setSuccess(false);
-                setBookingResult(null);
-                setFormData({
-                  name: '',
-                  email: '',
-                  phone: '',
-                  service: 'Portrait',
-                  eventDate: '',
-                  duration: '2',
-                  location: '',
-                  budget: '',
-                  notes: '',
-                });
-              }}
-              className="btn btn-primary"
-            >
-              New Booking
-            </button>
-          </div>
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <a href="/" className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-primary">
-              <Camera className="h-4 w-4" />
-            </div>
-            <span className="text-lg font-semibold">Studio</span>
-          </a>
-          <a href="/" className="text-sm text-gray-500 hover:text-gray-900">← Back to site</a>
+      <header className="border-b bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
+          <Link href="/" className="flex items-center gap-2 text-lg font-bold text-slate-900">
+            <Camera className="h-6 w-6" />
+            Studio Photography
+          </Link>
+          <Link
+            href="/admin"
+            className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200"
+          >
+            Admin
+          </Link>
         </div>
       </header>
 
-      {/* Form */}
-      <main className="mx-auto max-w-3xl px-6 py-12">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        {/* Title */}
         <div className="mb-8 text-center">
-          <div className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-primary">
-            <Sparkles className="h-4 w-4" />
-            Book a Session
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Tell Us About Your Shoot</h1>
-          <p className="mt-2 text-gray-500">
-            Fill in the details below and pay a <span className="font-semibold text-primary">{DEPOSIT_PERCENTAGE}% deposit</span> to confirm your booking.
-          </p>
+          <h1 className="text-3xl font-bold text-slate-900 sm:text-4xl">Book Your Session</h1>
+          <p className="mt-2 text-slate-500">Choose your photography session type and select a package</p>
         </div>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handlePaystackPayment();
-          }}
-          className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm"
-        >
-          {/* Personal Info */}
-          <div className="mb-8">
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-900">
-              Personal Information
-            </h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label className="label">
-                  <User className="mr-1 inline h-3.5 w-3.5" /> Full Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  className="input"
-                  placeholder="e.g. Sarah Mensah"
-                  value={formData.name}
-                  onChange={(e) => updateField('name', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="label">
-                  <Mail className="mr-1 inline h-3.5 w-3.5" /> Email
-                </label>
-                <input
-                  type="email"
-                  required
-                  className="input"
-                  placeholder="sarah@email.com"
-                  value={formData.email}
-                  onChange={(e) => updateField('email', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="label">
-                  <Phone className="mr-1 inline h-3.5 w-3.5" /> Phone
-                </label>
-                <input
-                  type="tel"
-                  className="input"
-                  placeholder="+233 24 000 0000"
-                  value={formData.phone}
-                  onChange={(e) => updateField('phone', e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
+        <div className="grid gap-8 lg:grid-cols-3">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Step 1: Select Session */}
+            <section>
+              <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-900">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">1</span>
+                Select Session Type
+              </h2>
 
-          {/* Booking Details */}
-          <div className="mb-8 border-t border-gray-100 pt-8">
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-900">
-              Booking Details
-            </h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="label">
-                  <Camera className="mr-1 inline h-3.5 w-3.5" /> Service
-                </label>
-                <select
-                  className="input"
-                  value={formData.service}
-                  onChange={(e) => updateField('service', e.target.value)}
-                >
-                  <option value="Wedding">Wedding</option>
-                  <option value="Portrait">Portrait</option>
-                  <option value="Event">Event</option>
-                  <option value="Commercial">Commercial</option>
-                </select>
-              </div>
-              <div>
-                <label className="label">
-                  <Calendar className="mr-1 inline h-3.5 w-3.5" /> Event Date
-                </label>
-                <input
-                  type="date"
-                  required
-                  className="input"
-                  value={formData.eventDate}
-                  onChange={(e) => updateField('eventDate', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="label">
-                  <Clock className="mr-1 inline h-3.5 w-3.5" /> Duration (hours)
-                </label>
-                <select
-                  className="input"
-                  value={formData.duration}
-                  onChange={(e) => updateField('duration', e.target.value)}
-                >
-                  {[1, 2, 3, 4, 6, 8, 10, 12].map((h) => (
-                    <option key={h} value={h}>
-                      {h} {h === 1 ? 'hour' : 'hours'}
-                    </option>
+              {sessions.length === 0 ? (
+                <div className="rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center">
+                  <Camera className="mx-auto mb-3 h-10 w-10 text-slate-300" />
+                  <p className="text-slate-500">No sessions available at the moment</p>
+                  <p className="mt-2 text-sm text-slate-400">
+                    <Link href="/admin/sessions" className="text-blue-600 hover:underline">
+                      Add sessions in the admin dashboard
+                    </Link>
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {sessions.map((session) => (
+                    <button
+                      key={session.id}
+                      onClick={() => selectSession(session)}
+                      className={`group relative overflow-hidden rounded-2xl border-2 p-0 text-left transition-all ${
+                        selectedSession?.id === session.id
+                          ? 'border-slate-900 shadow-lg'
+                          : 'border-slate-200 hover:border-slate-400 hover:shadow-md'
+                      }`}
+                    >
+                      {session.image ? (
+                        <div className="h-32 w-full overflow-hidden">
+                          <img
+                            src={session.image}
+                            alt={session.name}
+                            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-32 w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
+                          <Camera className="h-8 w-8 text-slate-400" />
+                        </div>
+                      )}
+                      <div className="p-4">
+                        <h3 className="font-semibold text-slate-900">{session.name}</h3>
+                        {session.category && (
+                          <p className="mt-0.5 text-xs text-slate-400">{session.category}</p>
+                        )}
+                        {session.description && (
+                          <p className="mt-1 text-sm text-slate-500 line-clamp-2">{session.description}</p>
+                        )}
+                        <p className="mt-2 text-xs text-slate-400">
+                          {session.packages.length} package{session.packages.length !== 1 ? 's' : ''} available
+                        </p>
+                      </div>
+                      {selectedSession?.id === session.id && (
+                        <div className="absolute right-3 top-3 rounded-full bg-slate-900 p-1">
+                          <CheckCircle className="h-4 w-4 text-white" />
+                        </div>
+                      )}
+                    </button>
                   ))}
-                </select>
-              </div>
-              <div>
-                <label className="label">
-                  <MapPin className="mr-1 inline h-3.5 w-3.5" /> Location
-                </label>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="e.g. La Palm Beach Hotel"
-                  value={formData.location}
-                  onChange={(e) => updateField('location', e.target.value)}
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="label">Budget (GHS, optional)</label>
-                <input
-                  type="number"
-                  className="input"
-                  placeholder="Leave blank to use default pricing"
-                  value={formData.budget}
-                  onChange={(e) => updateField('budget', e.target.value)}
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="label">
-                  <MessageSquare className="mr-1 inline h-3.5 w-3.5" /> Additional Notes
-                </label>
-                <textarea
-                  className="input min-h-[100px] resize-y"
-                  placeholder="Tell us about your vision, special requests, or anything we should know..."
-                  value={formData.notes}
-                  onChange={(e) => updateField('notes', e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
+                </div>
+              )}
+            </section>
 
-          {/* Payment Summary */}
-          <div className="mb-6 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 p-6">
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-primary flex items-center gap-2">
-              <Lock className="h-4 w-4" /> Payment Summary
-            </h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between text-gray-700">
-                <span>Total Package Price</span>
-                <span className="font-semibold">GHS {selectedPrice.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-gray-700">
-                <span>Deposit ({DEPOSIT_PERCENTAGE}%)</span>
-                <span className="font-bold text-primary text-base">GHS {depositAmount.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-gray-500 pt-2 border-t border-blue-200">
-                <span>Balance Due (on event day)</span>
-                <span>GHS {balanceAmount.toFixed(2)}</span>
-              </div>
-            </div>
-            <p className="mt-3 text-xs text-gray-500">
-              🔒 Secure payment powered by Paystack. Card, Mobile Money, and Bank Transfer accepted.
-            </p>
-          </div>
+            {/* Step 2: Select Package */}
+            {selectedSession && (
+              <section>
+                <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-900">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">2</span>
+                  Select Package
+                </h2>
 
-          <button
-            type="submit"
-            disabled={loading || paystackLoading}
-            className="btn btn-primary btn-lg w-full justify-center"
-          >
-            {paystackLoading ? (
-              'Processing Payment...'
-            ) : loading ? (
-              'Confirming Booking...'
-            ) : (
-              <>
-                <Lock className="h-4 w-4" />
-                Pay GHS {depositAmount.toFixed(2)} Deposit & Book Now
-              </>
+                {selectedSession.packages.length === 0 ? (
+                  <div className="rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center">
+                    <p className="text-slate-500">No packages available for this session</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                    {selectedSession.packages.map((pkg) => {
+                      const price = Number(pkg.price);
+                      const { deposit } = calculateDeposit(price, pkg.depositPercentage);
+                      const isSelected = selectedPackage?.id === pkg.id;
+
+                      return (
+                        <button
+                          key={pkg.id}
+                          onClick={() => setSelectedPackage(pkg)}
+                          className={`rounded-2xl border-2 p-6 text-left transition-all ${
+                            isSelected
+                              ? 'border-slate-900 bg-slate-50 shadow-lg'
+                              : 'border-slate-200 hover:border-slate-400 hover:shadow-md'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="text-lg font-semibold text-slate-900">{pkg.name}</h3>
+                              <p className="mt-1 text-2xl font-bold text-slate-900">{formatCurrency(price)}</p>
+                            </div>
+                            {isSelected && <CheckCircle className="h-6 w-6 text-slate-900" />}
+                          </div>
+
+                          {/* Quick details */}
+                          <div className="mt-4 flex flex-wrap gap-3 text-xs text-slate-500">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {pkg.duration}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              {pkg.maxPeople ?? 1} {(pkg.maxPeople ?? 1) === 1 ? 'person' : 'people'}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Image className="h-3 w-3" />
+                              {pkg.editedPhotos ?? 0} photos
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {pkg.locations ?? 1} {(pkg.locations ?? 1) === 1 ? 'location' : 'locations'}
+                            </span>
+                          </div>
+
+                          {/* Features */}
+                          {pkg.features.length > 0 && (
+                            <div className="mt-4 space-y-1.5">
+                              {pkg.features.map((f) => (
+                                <div key={f.id} className="flex items-center gap-2 text-sm text-slate-600">
+                                  <CheckCircle className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                                  {f.feature}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="mt-4 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-500">
+                            Deposit: {formatCurrency(deposit)} ({pkg.depositPercentage}%)
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
             )}
-          </button>
+          </div>
 
-          <p className="mt-4 text-center text-xs text-gray-500">
-            By booking, you agree to our terms. Deposit is non-refundable within 48 hours of event.
-          </p>
-        </form>
-      </main>
+          {/* Booking Summary Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-8 rounded-2xl bg-white p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-slate-900">Booking Summary</h3>
+
+              {!selectedSession && !selectedPackage ? (
+                <div className="mt-4 rounded-xl border-2 border-dashed border-slate-200 p-6 text-center">
+                  <Camera className="mx-auto mb-2 h-8 w-8 text-slate-300" />
+                  <p className="text-sm text-slate-400">
+                    Select a session and package to see your booking summary
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-4 space-y-4">
+                  {/* Session */}
+                  {selectedSession && (
+                    <div className="rounded-xl bg-slate-50 p-4">
+                      <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Session</p>
+                      <p className="mt-1 font-medium text-slate-900">{selectedSession.name}</p>
+                    </div>
+                  )}
+
+                  {/* Package */}
+                  {selectedPackage && (
+                    <>
+                      <div className="rounded-xl bg-slate-50 p-4">
+                        <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Package</p>
+                        <p className="mt-1 font-medium text-slate-900">{selectedPackage.name}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {selectedPackage.duration} • {selectedPackage.editedPhotos ?? 0} edited photos
+                        </p>
+                      </div>
+
+                      {/* Price breakdown */}
+                      <div className="space-y-2 border-t pt-4">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-500">Package Price</span>
+                          <span className="font-medium text-slate-900">
+                            {formatCurrency(Number(selectedPackage.price))}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-500">Deposit ({selectedPackage.depositPercentage}%)</span>
+                          <span className="font-semibold text-green-600">
+                            {formatCurrency(calculateDeposit(Number(selectedPackage.price), selectedPackage.depositPercentage).deposit)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-t pt-2 text-sm">
+                          <span className="text-slate-500">Remaining Balance</span>
+                          <span className="font-medium text-slate-900">
+                            {formatCurrency(calculateDeposit(Number(selectedPackage.price), selectedPackage.depositPercentage).balance)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Delivery info */}
+                      <div className="rounded-xl bg-blue-50 p-3 text-xs text-blue-700">
+                        📷 Delivery in {selectedPackage.deliveryTime || '3 Days'}
+                      </div>
+
+                      {selectedPackage.rescheduleAllowed && (
+                        <div className="rounded-xl bg-green-50 p-3 text-xs text-green-700">
+                          ✓ Free rescheduling (with {selectedPackage.rescheduleHours ?? 48}h notice)
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Book Button */}
+                  <button
+                    disabled={!selectedPackage}
+                    className="btn btn-primary w-full py-3"
+                  >
+                    {selectedPackage
+                      ? `Book Now — ${formatCurrency(calculateDeposit(Number(selectedPackage.price), selectedPackage.depositPercentage).deposit)} Deposit`
+                      : 'Select a Package to Book'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

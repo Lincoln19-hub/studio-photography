@@ -1,110 +1,145 @@
 import { getDashboardData } from '@/lib/data';
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
-import { TrendingUp, CalendarCheck, FileText, Users, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { TrendingUp, CalendarCheck, FileText, Users, ArrowUpRight, ArrowDownRight, Camera, Package } from 'lucide-react';
 import Link from 'next/link';
 
-const iconMap: Record<string, any> = { TrendingUp, CalendarCheck, FileText, Users };
+export const dynamic = 'force-dynamic';
 
-export default async function DashboardPage() {
+const iconMap: Record<string, typeof TrendingUp> = {
+  TrendingUp,
+  CalendarCheck,
+  FileText,
+  Users,
+};
+
+interface Stat {
+  label: string;
+  value: string;
+  icon: string;
+  color: string;
+  trend: string;
+  trendUp: boolean;
+}
+
+export default async function AdminDashboard() {
   const { stats, recentBookings, recentInvoices } = await getDashboardData();
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">Overview of your studio performance.</p>
+    <div className="space-y-8 p-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+        <p className="text-slate-500">Welcome back! Here&apos;s an overview of your studio.</p>
       </div>
 
-      {/* Stats */}
-      <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
+      {/* Stats Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat: Stat) => {
           const Icon = iconMap[stat.icon] || TrendingUp;
           return (
-            <div key={stat.label} className="stat-card">
+            <div key={stat.label} className="card">
               <div className="flex items-center justify-between">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${stat.color}`}>
+                <div className={`rounded-full p-2 ${stat.color}`}>
                   <Icon className="h-5 w-5" />
                 </div>
-                <span className={`inline-flex items-center gap-1 text-xs font-medium ${stat.trendUp ? 'text-green-600' : 'text-red-600'}`}>
-                  {stat.trendUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                <span className={`flex items-center text-sm ${stat.trendUp ? 'text-green-600' : 'text-red-600'}`}>
                   {stat.trend}
+                  {stat.trendUp ? <ArrowUpRight className="ml-1 h-4 w-4" /> : <ArrowDownRight className="ml-1 h-4 w-4" />}
                 </span>
               </div>
-              <div className="mt-4">
-                <div className="stat-value">{stat.value}</div>
-                <div className="stat-label">{stat.label}</div>
+              <div className="mt-3">
+                <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
+                <p className="text-sm text-slate-500">{stat.label}</p>
               </div>
             </div>
           );
         })}
       </div>
 
+      {/* Quick Actions */}
+      <div className="card">
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">Session & Package Management</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Link
+            href="/admin/sessions"
+            className="flex items-center gap-3 rounded-lg border border-slate-200 p-4 transition-colors hover:bg-slate-50"
+          >
+            <div className="rounded-full bg-blue-50 p-2 text-blue-600">
+              <Camera className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-medium text-slate-900">Sessions</p>
+              <p className="text-sm text-slate-500">Manage session types</p>
+            </div>
+          </Link>
+          <Link
+            href="/admin/packages"
+            className="flex items-center gap-3 rounded-lg border border-slate-200 p-4 transition-colors hover:bg-slate-50"
+          >
+            <div className="rounded-full bg-purple-50 p-2 text-purple-600">
+              <Package className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-medium text-slate-900">Packages</p>
+              <p className="text-sm text-slate-500">Manage pricing packages</p>
+            </div>
+          </Link>
+          <Link
+            href="/book"
+            className="flex items-center gap-3 rounded-lg border border-slate-200 p-4 transition-colors hover:bg-slate-50"
+          >
+            <div className="rounded-full bg-green-50 p-2 text-green-600">
+              <CalendarCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-medium text-slate-900">Booking Page</p>
+              <p className="text-sm text-slate-500">View live booking</p>
+            </div>
+          </Link>
+        </div>
+      </div>
+
       {/* Recent Activity */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent Bookings */}
-        <div className="rounded-xl border border-gray-200 bg-white">
-          <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-            <h3 className="font-semibold text-gray-900">Recent Bookings</h3>
-            <Link href="/admin/bookings" className="text-xs font-medium text-primary hover:text-primary-800">View all →</Link>
+        <div className="card">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-900">Recent Bookings</h2>
+            <Link href="/admin/bookings" className="text-sm text-blue-600 hover:underline">View all</Link>
           </div>
-          <div className="divide-y divide-gray-50">
-            {recentBookings.length === 0 ? (
-              <div className="px-6 py-8 text-center text-sm text-gray-500">No bookings yet</div>
-            ) : (
-              recentBookings.map((booking: any) => (
-                <div key={booking.id} className="flex items-center justify-between px-6 py-4">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">{booking.client?.name}</div>
-                    <div className="text-xs text-gray-500">{booking.service} · {formatDate(booking.eventDate)}</div>
-                  </div>
-                  <span className={`badge ${getStatusColor(booking.status)}`}>{booking.status}</span>
+          <div className="space-y-3">
+            {recentBookings.slice(0, 3).map((booking: { id: string; client: { name: string }; service: string; eventDate: Date; status: string }) => (
+              <div key={booking.id} className="flex items-center justify-between rounded-lg border border-slate-100 p-3">
+                <div>
+                  <p className="font-medium text-slate-900">{booking.client.name}</p>
+                  <p className="text-sm text-slate-500">{booking.service} • {formatDate(booking.eventDate)}</p>
                 </div>
-              ))
-            )}
+                <span className={`badge ${getStatusColor(booking.status)}`}>{booking.status}</span>
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Recent Invoices */}
-        <div className="rounded-xl border border-gray-200 bg-white">
-          <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-            <h3 className="font-semibold text-gray-900">Recent Invoices</h3>
-            <Link href="/admin/invoices" className="text-xs font-medium text-primary hover:text-primary-800">View all →</Link>
+        <div className="card">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-900">Recent Invoices</h2>
           </div>
-          <div className="divide-y divide-gray-50">
-            {recentInvoices.length === 0 ? (
-              <div className="px-6 py-8 text-center text-sm text-gray-500">No invoices yet</div>
-            ) : (
-              recentInvoices.map((invoice: any) => (
-                <div key={invoice.id} className="flex items-center justify-between px-6 py-4">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">{invoice.invoiceNumber}</div>
-                    <div className="text-xs text-gray-500">{invoice.client?.name} · {formatCurrency(invoice.total)}</div>
-                  </div>
+          <div className="space-y-3">
+            {recentInvoices.slice(0, 3).map((invoice: { id: string; invoiceNumber: string; client: { name: string }; total: number; status: string }) => (
+              <div key={invoice.id} className="flex items-center justify-between rounded-lg border border-slate-100 p-3">
+                <div>
+                  <p className="font-medium text-slate-900">{invoice.invoiceNumber}</p>
+                  <p className="text-sm text-slate-500">{invoice.client.name}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium text-slate-900">GHS {invoice.total.toFixed(2)}</p>
                   <span className={`badge ${getStatusColor(invoice.status)}`}>{invoice.status}</span>
                 </div>
-              ))
-            )}
+              </div>
+            ))}
           </div>
         </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="mt-8 grid gap-4 md:grid-cols-3">
-        <Link href="/book" className="rounded-xl border border-gray-200 bg-white p-6 text-center transition-all hover:border-primary/30 hover:shadow-md">
-          <CalendarCheck className="mx-auto mb-2 h-8 w-8 text-primary" />
-          <div className="text-sm font-semibold text-gray-900">New Booking</div>
-          <div className="mt-1 text-xs text-gray-500">Create a booking from the public form</div>
-        </Link>
-        <Link href="/admin/invoices/new" className="rounded-xl border border-gray-200 bg-white p-6 text-center transition-all hover:border-primary/30 hover:shadow-md">
-          <FileText className="mx-auto mb-2 h-8 w-8 text-primary" />
-          <div className="text-sm font-semibold text-gray-900">Create Invoice</div>
-          <div className="mt-1 text-xs text-gray-500">Generate a new invoice</div>
-        </Link>
-        <Link href="/admin/clients" className="rounded-xl border border-gray-200 bg-white p-6 text-center transition-all hover:border-primary/30 hover:shadow-md">
-          <Users className="mx-auto mb-2 h-8 w-8 text-primary" />
-          <div className="text-sm font-semibold text-gray-900">Manage Clients</div>
-          <div className="mt-1 text-xs text-gray-500">View all client records</div>
-        </Link>
       </div>
     </div>
   );
