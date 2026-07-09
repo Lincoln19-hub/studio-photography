@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { sessions, packages } from '@/lib/schema';
-import { eq, isNull, sql, asc } from 'drizzle-orm';
+import { eq, isNull, sql, asc, and } from 'drizzle-orm';
 import { NextRequest } from 'next/server';
 import { slugify } from '@/lib/utils';
 
@@ -11,27 +11,28 @@ export async function GET(req: NextRequest) {
     const includeDeleted = req.nextUrl.searchParams.get('includeDeleted') === 'true';
     const where = includeDeleted ? undefined : isNull(sessions.deletedAt);
 
-    const rows = await db
-      .select({
-        id: sessions.id,
-        name: sessions.name,
-        slug: sessions.slug,
-        description: sessions.description,
-        category: sessions.category,
-        image: sessions.image,
-        featured: sessions.featured,
-        displayOrder: sessions.displayOrder,
-        active: sessions.active,
-        deletedAt: sessions.deletedAt,
-        createdAt: sessions.createdAt,
-        updatedAt: sessions.updatedAt,
-        packageCount: sql<number>`(SELECT count(*) FROM packages WHERE packages.session_id = ${sessions.id} AND packages.deleted_at IS NULL)::int`,
-      })
+    const sessionRows = await db
+      .select()
       .from(sessions)
       .where(where)
       .orderBy(asc(sessions.displayOrder), asc(sessions.createdAt));
 
-    return Response.json(rows);
+    // Get package counts separately
+    const result = await Promise.all(
+      sessionRows.map(async (session) => {
+        const [countResult] = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(packages)
+          .where(and(eq(packages.sessionId, session.id), isNull(packages.deletedAt)));
+        
+        return {
+          ...session,
+          packageCount: countResult?.count ?? 0,
+        };
+      })
+    );
+
+    return Response.json(result);
   } catch (e) {
     console.error(e);
     return Response.json({ error: 'Failed to fetch sessions' }, { status: 500 });
